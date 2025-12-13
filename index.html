@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Receipt Generator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+  <style>
+    :root{--bg:#f6f6f6;--panel:#fff;--muted:#666;--accent:#1c7ed6}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);margin:0;padding:20px;color:#222}
+    .wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:420px 1fr;gap:20px}
+    .card{background:var(--panel);padding:16px;border-radius:10px;box-shadow:0 6px 18px rgba(15,15,15,0.06)}
+    h1{margin:0 0 12px;font-size:18px}
+    h2{margin:16px 0 8px;font-size:15px;color:#444}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+    input[type=text], input[type=number], select, textarea{width:100%;padding:8px;border:1px solid #e6e6e6;border-radius:6px;margin-top:6px;box-sizing:border-box;font-size:13px}
+    .items{margin-top:10px}
+    .item-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .item-row input{flex:1}
+    .small{width:80px}
+    .xsmall{width:60px}
+    .actions{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+    button.secondary{background:#efefef;color:#222}
+    button.small{padding:5px 8px;font-size:12px}
+    .preview-wrap{display:flex;flex-direction:column;gap:12px}
+    .receipt-canvas{border:1px dashed #ddd;border-radius:6px;background:#fff;width:100%;max-width:420px;height:auto;padding:12px;margin:0 auto}
+    .receipt-canvas img{display:block;margin:0 auto;max-width:100%;height:auto}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .meta{font-size:12px;color:var(--muted);margin-top:6px}
+    footer{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
+    #logoUpload{font-size:12px}
+    .logo-preview{max-width:120px;max-height:60px;margin-top:8px;border:1px solid #eee;padding:4px;border-radius:4px}
+    .input-group{display:flex;gap:8px;align-items:flex-end}
+    .input-group>div{flex:1}
+    .section{margin-top:16px;padding-top:16px;border-top:1px solid #eee}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    @media(max-width:900px){
+      .wrap{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Receipt Generator — Settings</h1>
+
+      <h2>Header</h2>
+      <label>Shop/Business name
+        <input id="header" type="text" value="ACME Superstore" />
+      </label>
+
+      <label>Receipt Style
+        <select id="templateSelect">
+          <option value="classic">Classic</option>
+          <option value="modern">Modern</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </label>
+
+      <label>Logo (select from library)
+        <select id="logoSelect">
+          <option value="">None</option>
+          <option value="image/Tesco.png">Tesco</option>
+          <option value="image/Waitrose.png">Waitrose</option>
+          <option value="image/Coop.png">Coop</option>
+          <option value="image/Sainsburys.png">Sainsburys</option>
+          <option value="image/Iceland.png">Iceland</option>
+          <option value="image/M and S.png">M and S</option>
+          <option value="image/Mcdonalds.png">Mcdonalds</option>
+          <option value="image/Lidl.png">Lidl</option>
+          <option value="image/Aldi.png">Aldi</option>
+        </select>
+      </label>
+
+      <label>Or upload custom logo
+        <input id="logoUpload" type="file" accept="image/*" />
+      </label>
+      <img id="logoPreview" class="logo-preview" style="display:none" />
+
+      <div class="section">
+        <h2>Business Information</h2>
+        <label>Address Line 1
+          <input id="address1" type="text" value="123 Market Street" />
+        </label>
+        <label>Address Line 2
+          <input id="address2" type="text" value="Cityville, ST 12345" />
+        </label>
+        <label>Phone Number
+          <input id="phone" type="text" value="(555) 123-4567" />
+        </label>
+      </div>
+
+      <div class="section">
+        <h2>Date & Time</h2>
+        <div class="input-group">
+          <div>
+            <input id="datetime" type="text" value="" placeholder="auto" />
+          </div>
+          <button id="autoDate" class="secondary small" type="button">Now</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Receipt Details</h2>
+        <label>Receipt Number
+          <input id="receiptNum" type="text" value="#12345" />
+        </label>
+        <label>Cashier/Employee
+          <input id="cashier" type="text" value="Jane D." />
+        </label>
+        <label>Register Number
+          <input id="register" type="text" value="Register 3" />
+        </label>
+      </div>
+
+      <div class="section items">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 style="margin:0">Items</h2>
+          <button id="addItem" class="secondary small" type="button">+ Add Item</button>
+        </div>
+        <div id="itemsList"></div>
+      </div>
+
+      <div class="section">
+        <h2>Taxes & Totals</h2>
+        <label>Subtotal calculation
+          <select id="subtotalCalc">
+            <option value="auto">Auto (from items)</option>
+            <option value="manual">Manual entry</option>
+          </select>
+        </label>
+        <label id="manualSubtotalLabel" style="display:none">Subtotal
+          <input id="manualSubtotal" type="number" step="0.01" value="0.00" />
+        </label>
+        <div class="two-col">
+          <label>Tax Rate (%)
+            <input id="taxRate" type="number" step="0.01" value="8.5" />
+          </label>
+          <label>Discount ($)
+            <input id="discount" type="number" step="0.01" value="0.00" />
+          </label>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Payment</h2>
+        <label>Payment Method
+          <select id="paymentMethod">
+            <option value="CARD">Credit/Debit Card</option>
+            <option value="CASH">Cash</option>
+            <option value="MOBILE">Mobile Payment</option>
+            <option value="CHECK">Check</option>
+          </select>
+        </label>
+        <label>Payment Details
+          <input id="paymentDetails" type="text" value="VISA ****1234" />
+        </label>
+      </div>
+
+      <div class="section">
+        <h2>Footer</h2>
+        <label>Thank you message
+          <input id="thankYou" type="text" value="Thank you for shopping with us!" />
+        </label>
+        <label>Return policy
+          <input id="returnPolicy" type="text" value="Returns accepted within 30 days with receipt" />
+        </label>
+        <label>Custom message
+          <input id="customMsg" type="text" value="" />
+        </label>
+      </div>
+
+      <div class="section">
+        <h2>Options</h2>
+        <label>Currency Symbol
+          <select id="currencySymbol">
+            <option value="£">£ Pound (GBP)</option>
+            <option value="$">$ Dollar (USD)</option>
+            <option value="€">€ Euro (EUR)</option>
+            <option value="¥">¥ Yen (JPY)</option>
+            <option value="₹">₹ Rupee (INR)</option>
+            <option value="₽">₽ Ruble (RUB)</option>
+            <option value="A$">A$ Australian Dollar</option>
+            <option value="C$">C$ Canadian Dollar</option>
+          </select>
+        </label>
+        <label><input id="showBarcode" type="checkbox" /> Show barcode</label>
+        <label><input id="showTexture" type="checkbox" /> Thermal paper texture</label>
+      </div>
+
+      <div class="actions">
+        <button id="render">Render Preview</button>
+        <button id="download" type="button">Download PNG</button>
+        <button id="reset" class="secondary" type="button">Reset</button>
+        <button id="clearLogo" class="secondary" type="button">Clear Logo</button>
+      </div>
+
+      <div class="meta">Tip: Edit any field and click Render to update the preview.</div>
+    </div>
+
+    <div class="card preview-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h1>Preview</h1>
+      </div>
+
+      <div id="canvasParent" class="receipt-canvas"></div>
+
+      <footer>Generated with Receipt Generator (No server required)</footer>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+  <script>
+    const itemsList = document.getElementById('itemsList');
+    const addItemBtn = document.getElementById('addItem');
+    const header = document.getElementById('header');
+    const address1 = document.getElementById('address1');
+    const address2 = document.getElementById('address2');
+    const phone = document.getElementById('phone');
+    const datetime = document.getElementById('datetime');
+    const receiptNum = document.getElementById('receiptNum');
+    const cashier = document.getElementById('cashier');
+    const register = document.getElementById('register');
+    const taxRate = document.getElementById('taxRate');
+    const discount = document.getElementById('discount');
+    const paymentMethod = document.getElementById('paymentMethod');
+    const paymentDetails = document.getElementById('paymentDetails');
+    const thankYou = document.getElementById('thankYou');
+    const returnPolicy = document.getElementById('returnPolicy');
+    const customMsg = document.getElementById('customMsg');
+    const renderBtn = document.getElementById('render');
+    const canvasParent = document.getElementById('canvasParent');
+    const downloadBtn = document.getElementById('download');
+    const resetBtn = document.getElementById('reset');
+    const templateSelect = document.getElementById('templateSelect');
+    const autoDateBtn = document.getElementById('autoDate');
+    const showBarcode = document.getElementById('showBarcode');
+    const showTexture = document.getElementById('showTexture');
+    const currencySymbol = document.getElementById('currencySymbol');
+    const logoUpload = document.getElementById('logoUpload');
+    const logoSelect = document.getElementById('logoSelect');
+    const logoPreview = document.getElementById('logoPreview');
+    const clearLogoBtn = document.getElementById('clearLogo');
+    const subtotalCalc = document.getElementById('subtotalCalc');
+    const manualSubtotal = document.getElementById('manualSubtotal');
+    const manualSubtotalLabel = document.getElementById('manualSubtotalLabel');
+
+    let currentLogo = null;
+
+    function makeItemRow(name='', qty=1, price=0){
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      
+      const nameInput = document.createElement('input'); 
+      nameInput.type='text'; 
+      nameInput.value=name; 
+      nameInput.placeholder='Item description';
+      
+      const qtyInput = document.createElement('input'); 
+      qtyInput.type='number'; 
+      qtyInput.value=qty; 
+      qtyInput.className='xsmall'; 
+      qtyInput.min=1;
+      qtyInput.placeholder='Qty';
+      
+      const priceInput = document.createElement('input'); 
+      priceInput.type='number'; 
+      priceInput.step='0.01'; 
+      priceInput.value=price; 
+      priceInput.className='small';
+      priceInput.placeholder='Price';
+      
+      const del = document.createElement('button'); 
+      del.type='button'; 
+      del.textContent='✕'; 
+      del.className='secondary small';
+      del.addEventListener('click', ()=> row.remove());
+      
+      row.appendChild(nameInput); 
+      row.appendChild(qtyInput); 
+      row.appendChild(priceInput); 
+      row.appendChild(del);
+      return row;
+    }
+
+    addItemBtn.addEventListener('click', ()=> itemsList.appendChild(makeItemRow('Example item',1,2.50)));
+    
+    // Seed items
+    itemsList.appendChild(makeItemRow('Bananas',2,0.75));
+    itemsList.appendChild(makeItemRow('Bread',1,1.50));
+    itemsList.appendChild(makeItemRow('Milk',1,3.49));
+
+    // Subtotal calc toggle
+    subtotalCalc.addEventListener('change', ()=>{
+      if(subtotalCalc.value === 'manual'){
+        manualSubtotalLabel.style.display = 'block';
+      } else {
+        manualSubtotalLabel.style.display = 'none';
+      }
+    });
+
+    // Logo handling - dropdown
+    logoSelect.addEventListener('change', (e)=>{
+      if(e.target.value){
+        currentLogo = e.target.value;
+        logoPreview.src = currentLogo;
+        logoPreview.style.display = 'block';
+        logoUpload.value = '';
+        renderReceipt();
+      } else {
+        currentLogo = null;
+        logoPreview.style.display = 'none';
+        renderReceipt();
+      }
+    });
+
+    // Logo handling - upload
+    logoUpload.addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(file){
+        const reader = new FileReader();
+        reader.onload = (event)=>{
+          currentLogo = event.target.result;
+          logoPreview.src = currentLogo;
+          logoPreview.style.display = 'block';
+          logoSelect.value = '';
+          renderReceipt();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    clearLogoBtn.addEventListener('click', ()=>{
+      currentLogo = null;
+      logoUpload.value = '';
+      logoSelect.value = '';
+      logoPreview.style.display = 'none';
+      renderReceipt();
+    });
+
+    function collectData(){
+      const itemRows = Array.from(itemsList.querySelectorAll('.item-row'));
+      const items = itemRows.map(r=>{
+        const inputs = r.querySelectorAll('input');
+        return {
+          name:inputs[0].value||'Item', 
+          qty:parseFloat(inputs[1].value)||1, 
+          price:parseFloat(inputs[2].value)||0
+        };
+      });
+      return {
+        header: header.value,
+        address1: address1.value,
+        address2: address2.value,
+        phone: phone.value,
+        datetime: datetime.value || new Date().toLocaleString(),
+        receiptNum: receiptNum.value,
+        cashier: cashier.value,
+        register: register.value,
+        items,
+        taxRate: parseFloat(taxRate.value) || 0,
+        discount: parseFloat(discount.value) || 0,
+        paymentMethod: paymentMethod.value,
+        paymentDetails: paymentDetails.value,
+        thankYou: thankYou.value,
+        returnPolicy: returnPolicy.value,
+        customMsg: customMsg.value,
+        showBarcode: showBarcode.checked,
+        showTexture: showTexture.checked,
+        template: templateSelect.value,
+        logo: currentLogo,
+        subtotalCalc: subtotalCalc.value,
+        manualSubtotal: parseFloat(manualSubtotal.value) || 0,
+        currency: currencySymbol.value
+      };
+    }
+
+    async function renderReceipt(){
+      const data = collectData();
+      const width = 420;
+      
+      // Calculate subtotal
+      let subtotal = 0;
+      if(data.subtotalCalc === 'auto'){
+        data.items.forEach(it => subtotal += it.qty * it.price);
+      } else {
+        subtotal = data.manualSubtotal;
+      }
+      
+      const tax = subtotal * (data.taxRate / 100);
+      const total = subtotal + tax - data.discount;
+      
+      // Calculate height
+      let logoHeight = 0;
+      if(data.logo) logoHeight = 95;
+      
+      let barcodeHeight = 0;
+      if(data.showBarcode) barcodeHeight = 70;
+      
+      const baseHeight = 320 + logoHeight + data.items.length * 24 + barcodeHeight;
+      const height = Math.max(400, baseHeight);
+      
+      const canvas = document.createElement('canvas'); 
+      canvas.width = width; 
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      
+      // Background
+      ctx.fillStyle = '#ffffff'; 
+      ctx.fillRect(0,0,width,height);
+      
+      // Thermal texture
+      if(data.showTexture){
+        ctx.save();
+        ctx.globalAlpha = 0.03;
+        for(let i=0; i<height; i+=2){
+          ctx.fillStyle = Math.random() > 0.5 ? '#000' : '#fff';
+          ctx.fillRect(0, i, width, 1);
+        }
+        ctx.restore();
+      }
+      
+      let yPos = 20;
+
+      // Logo
+      if(data.logo){
+        const logoImg = new Image();
+        logoImg.src = data.logo;
+        await new Promise(res => { 
+          logoImg.onload = res; 
+          logoImg.onerror = res; 
+        });
+        
+        const targetHeightPx = 75.59;
+        const aspectRatio = logoImg.width / logoImg.height;
+        let logoHeight = targetHeightPx;
+        let logoWidth = logoHeight * aspectRatio;
+        const maxLogoWidth = 350;
+        if(logoWidth > maxLogoWidth){
+          logoWidth = maxLogoWidth;
+          logoHeight = logoWidth / aspectRatio;
+        }
+        
+        ctx.drawImage(logoImg, (width-logoWidth)/2, yPos, logoWidth, logoHeight);
+        yPos += logoHeight + 15;
+      }
+
+      // Header
+      ctx.textAlign='center'; 
+      ctx.fillStyle = '#111';
+      ctx.font = 'bold 20px monospace';
+      if(data.template==='modern') ctx.font='bold 20px Arial';
+      if(data.template==='minimal') ctx.font='bold 18px system-ui';
+      
+      ctx.fillText(data.header, width/2, yPos);
+      yPos += 18;
+      
+      ctx.font='11px monospace'; 
+      ctx.fillStyle='#444'; 
+      ctx.fillText(data.address1, width/2, yPos);
+      yPos += 14;
+      ctx.fillText(data.address2, width/2, yPos);
+      yPos += 14;
+      ctx.fillText(data.phone, width/2, yPos);
+      yPos += 20;
+      
+      // Receipt details
+      ctx.textAlign='left';
+      ctx.font='11px monospace';
+      ctx.fillStyle='#000';
+      ctx.fillText('Date: ' + data.datetime, 12, yPos);
+      yPos += 14;
+      ctx.fillText('Receipt: ' + data.receiptNum, 12, yPos);
+      ctx.textAlign='right';
+      ctx.fillText(data.register, width-12, yPos);
+      yPos += 14;
+      ctx.textAlign='left';
+      ctx.fillText('Cashier: ' + data.cashier, 12, yPos);
+      yPos += 18;
+
+      // Items header
+      ctx.beginPath(); 
+      ctx.moveTo(12, yPos); 
+      ctx.lineTo(width-12, yPos); 
+      ctx.strokeStyle='#ccc'; 
+      ctx.stroke();
+      yPos += 14;
+      
+      ctx.font='bold 11px monospace';
+      ctx.fillText('QTY  ITEM', 12, yPos);
+      ctx.textAlign='right';
+      ctx.fillText('PRICE', width-12, yPos);
+      yPos += 4;
+      
+      ctx.beginPath(); 
+      ctx.moveTo(12, yPos); 
+      ctx.lineTo(width-12, yPos); 
+      ctx.strokeStyle='#ccc'; 
+      ctx.stroke();
+      yPos += 16;
+
+      // Items
+      ctx.font='11px monospace';
+      ctx.textAlign='left';
+      data.items.forEach(it=>{
+        const linePrice = (it.qty * it.price);
+        ctx.fillText(String(it.qty).padStart(2,' ') + '  ' + it.name, 12, yPos);
+        ctx.textAlign='right'; 
+        ctx.fillText(data.currency + linePrice.toFixed(2), width-12, yPos);
+        ctx.textAlign='left'; 
+        yPos += 22;
+      });
+
+      // Totals
+      yPos += 6;
+      ctx.beginPath(); 
+      ctx.moveTo(12, yPos); 
+      ctx.lineTo(width-12, yPos); 
+      ctx.strokeStyle='#ccc'; 
+      ctx.stroke();
+      yPos += 16;
+      
+      ctx.font='11px monospace';
+      ctx.fillText('SUBTOTAL:', 200, yPos);
+      ctx.textAlign='right';
+      ctx.fillText(data.currency + subtotal.toFixed(2), width-12, yPos);
+      yPos += 16;
+      
+      ctx.textAlign='left';
+      ctx.fillText('TAX (' + data.taxRate + '%):', 200, yPos);
+      ctx.textAlign='right';
+      ctx.fillText(data.currency + tax.toFixed(2), width-12, yPos);
+      yPos += 16;
+      
+      if(data.discount > 0){
+        ctx.textAlign='left';
+        ctx.fillText('DISCOUNT:', 200, yPos);
+        ctx.textAlign='right';
+        ctx.fillText('-' + data.currency + data.discount.toFixed(2), width-12, yPos);
+        yPos += 16;
+      }
+      
+      ctx.beginPath(); 
+      ctx.moveTo(12, yPos); 
+      ctx.lineTo(width-12, yPos); 
+      ctx.strokeStyle='#000'; 
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      yPos += 18;
+      
+      ctx.textAlign='left';
+      ctx.font='bold 14px monospace';
+      ctx.fillText('TOTAL:', 200, yPos);
+      ctx.textAlign='right';
+      ctx.fillText(data.currency + total.toFixed(2), width-12, yPos);
+      yPos += 20;
+
+      // Payment
+      ctx.textAlign='left';
+      ctx.font='11px monospace';
+      ctx.fillStyle='#444';
+      ctx.fillText('Payment: ' + data.paymentMethod, 12, yPos);
+      yPos += 14;
+      ctx.fillText(data.paymentDetails, 12, yPos);
+      yPos += 24;
+
+      // Footer
+      ctx.textAlign='center';
+      ctx.font='11px monospace';
+      ctx.fillStyle='#000';
+      if(data.thankYou){
+        ctx.fillText(data.thankYou, width/2, yPos);
+        yPos += 16;
+      }
+      ctx.fillStyle='#666';
+      ctx.font='10px monospace';
+      if(data.returnPolicy){
+        const words = data.returnPolicy.split(' ');
+        let line = '';
+        const maxWidth = 380;
+        for(let word of words){
+          const testLine = line + word + ' ';
+          const metrics = ctx.measureText(testLine);
+          if(metrics.width > maxWidth && line !== ''){
+            ctx.fillText(line.trim(), width/2, yPos);
+            yPos += 14;
+            line = word + ' ';
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line.trim(), width/2, yPos);
+        yPos += 14;
+      }
+      if(data.customMsg){
+        ctx.fillText(data.customMsg, width/2, yPos);
+        yPos += 14;
+      }
+
+      // Barcode
+      if(data.showBarcode){
+        yPos += 10;
+        const bcCanvas = document.createElement('canvas'); 
+        bcCanvas.width = 200; 
+        bcCanvas.height = 40;
+        try{
+          JsBarcode(bcCanvas, String(Math.floor(Math.random()*1e12)), {
+            format:'CODE128',
+            height:30,
+            displayValue:false
+          });
+          ctx.drawImage(bcCanvas, width/2 - 100, yPos);
+        }catch(e){
+          console.error('Barcode error:', e);
+        }
+      }
+
+      // Convert to image
+      const dataUrl = canvas.toDataURL('image/png');
+      canvasParent.innerHTML = '';
+      const img = document.createElement('img'); 
+      img.src = dataUrl; 
+      img.alt='Receipt preview';
+      canvasParent.appendChild(img);
+      canvasParent._canvas = canvas;
+    }
+
+    renderBtn.addEventListener('click', ()=> renderReceipt());
+    
+    autoDateBtn.addEventListener('click', ()=>{ 
+      datetime.value = new Date().toLocaleString(); 
+      renderReceipt();
+    });
+
+    // Real-time preview - debounced to avoid excessive rendering
+    let renderTimeout;
+    function scheduleRender(){
+      clearTimeout(renderTimeout);
+      renderTimeout = setTimeout(renderReceipt, 300);
+    }
+
+    // Add event listeners for real-time updates
+    [header, address1, address2, phone, datetime, receiptNum, cashier, register, 
+     taxRate, discount, paymentMethod, paymentDetails, thankYou, returnPolicy, 
+     customMsg, manualSubtotal].forEach(input => {
+      input.addEventListener('input', scheduleRender);
+    });
+
+    [templateSelect, subtotalCalc, paymentMethod, showBarcode, showTexture, currencySymbol].forEach(input => {
+      input.addEventListener('change', scheduleRender);
+    });
+
+    // Item list real-time updates
+    itemsList.addEventListener('input', scheduleRender);
+
+    downloadBtn.addEventListener('click', ()=>{
+      const c = canvasParent._canvas;
+      if(!c){ 
+        alert('Render the preview first'); 
+        return; 
+      }
+      const a = document.createElement('a'); 
+      a.href = c.toDataURL('image/png'); 
+      a.download = 'receipt-' + Date.now() + '.png';
+      a.click();
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      if(confirm('Reset all fields to default values?')){
+        header.value = 'ACME Superstore';
+        address1.value = '123 Market Street';
+        address2.value = 'Cityville, ST 12345';
+        phone.value = '(555) 123-4567';
+        datetime.value = '';
+        receiptNum.value = '#12345';
+        cashier.value = 'Jane D.';
+        register.value = 'Register 3';
+        taxRate.value = '8.5';
+        discount.value = '0.00';
+        paymentMethod.value = 'CARD';
+        paymentDetails.value = 'VISA ****1234';
+        thankYou.value = 'Thank you for shopping with us!';
+        returnPolicy.value = 'Returns accepted within 30 days with receipt';
+        customMsg.value = '';
+        showBarcode.checked = false;
+        showTexture.checked = false;
+        itemsList.innerHTML = '';
+        itemsList.appendChild(makeItemRow('Bananas',2,0.75));
+        itemsList.appendChild(makeItemRow('Bread',1,1.50));
+        itemsList.appendChild(makeItemRow('Milk',1,3.49));
+        currentLogo = null;
+        logoUpload.value = '';
+        logoSelect.value = '';
+        logoPreview.style.display = 'none';
+        renderReceipt();
+      }
+    });
+
+    // Initial render
+    renderReceipt();
+  </script>
+</body>
+</html>
