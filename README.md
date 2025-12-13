@@ -1,5 +1,5 @@
 
-# Receit Generator
+# Receipt Generator
 
 https://nilltronic.github.io/receipt/
 
