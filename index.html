@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -195,6 +196,12 @@
             <option value="C$">C$ Canadian Dollar</option>
           </select>
         </label>
+        <label>Logo Style
+          <select id="logoStyle">
+            <option value="color">Color</option>
+            <option value="greyscale">Greyscale (Thermal)</option>
+          </select>
+        </label>
         <label><input id="showBarcode" type="checkbox" /> Show barcode</label>
         <label><input id="showTexture" type="checkbox" /> Thermal paper texture</label>
       </div>
@@ -249,6 +256,7 @@
     const showBarcode = document.getElementById('showBarcode');
     const showTexture = document.getElementById('showTexture');
     const currencySymbol = document.getElementById('currencySymbol');
+    const logoStyle = document.getElementById('logoStyle');
     const logoUpload = document.getElementById('logoUpload');
     const logoSelect = document.getElementById('logoSelect');
     const logoPreview = document.getElementById('logoPreview');
@@ -381,6 +389,7 @@
         showTexture: showTexture.checked,
         template: templateSelect.value,
         logo: currentLogo,
+        logoStyle: logoStyle.value,
         subtotalCalc: subtotalCalc.value,
         manualSubtotal: parseFloat(manualSubtotal.value) || 0,
         currency: currencySymbol.value
@@ -453,7 +462,16 @@
           logoHeight = logoWidth / aspectRatio;
         }
         
-        ctx.drawImage(logoImg, (width-logoWidth)/2, yPos, logoWidth, logoHeight);
+        // Apply greyscale filter if selected
+        if(data.logoStyle === 'greyscale'){
+          ctx.save();
+          ctx.filter = 'grayscale(100%)';
+          ctx.drawImage(logoImg, (width-logoWidth)/2, yPos, logoWidth, logoHeight);
+          ctx.restore();
+        } else {
+          ctx.drawImage(logoImg, (width-logoWidth)/2, yPos, logoWidth, logoHeight);
+        }
+        
         yPos += logoHeight + 15;
       }
 
@@ -659,7 +677,7 @@
       input.addEventListener('input', scheduleRender);
     });
 
-    [templateSelect, subtotalCalc, paymentMethod, showBarcode, showTexture, currencySymbol].forEach(input => {
+    [templateSelect, subtotalCalc, paymentMethod, showBarcode, showTexture, currencySymbol, logoStyle].forEach(input => {
       input.addEventListener('change', scheduleRender);
     });
 
@@ -713,10 +731,4 @@
     renderReceipt();
   </script>
 </body>
-
 </html>
-
-
-
-
-
